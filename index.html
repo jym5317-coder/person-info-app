@@ -3,83 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>현장 인물 정보 관리 시스템</title>
+    <title>현장 인물 정보 관리 시스템 V2</title>
     <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8f9fa; padding: 15px; margin: 0; }
-        .container { max-width: 600px; margin: 0 auto; }
-        header { background: #343a40; color: white; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 15px; }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; padding: 10px; margin: 0; }
+        .container { max-width: 500px; margin: 0 auto; }
+        header { background: #1a73e8; color: white; padding: 15px; text-align: center; border-radius: 12px; margin-bottom: 15px; }
         
-        /* 검색창 스타일 */
-        .search-box { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; font-size: 16px; box-sizing: border-box; }
+        .search-box { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; font-size: 16px; box-sizing: border-box; }
 
         /* 인물 카드 스타일 */
-        .person-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #007bff; }
-        .info h3 { margin: 0; font-size: 18px; color: #333; }
-        .info p { margin: 5px 0 0; color: #666; font-size: 14px; }
+        .person-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 6px solid #1a73e8; }
+        .basic-info { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .name-tag h3 { margin: 0; font-size: 18px; }
+        .name-tag p { margin: 3px 0 0; color: #666; font-size: 13px; }
         
-        /* 전화 버튼 */
-        .call-btn { background: #28a745; color: white; text-decoration: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; font-size: 14px; }
+        /* 상세 정보 스타일 (평소엔 숨김) */
+        .details { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; font-size: 14px; line-height: 1.6; color: #444; }
+        .details img { width: 100%; border-radius: 8px; margin-bottom: 10px; background: #eee; }
+        .detail-item { margin-bottom: 8px; }
+        .label { font-weight: bold; color: #1a73e8; margin-right: 5px; }
+
+        .call-btn { background: #34a853; color: white; text-decoration: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+        .active .details { display: block; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header>
-        <h1>👥 인물 정보 연락처</h1>
-    </header>
-
-    <input type="text" id="searchInput" class="search-box" placeholder="이름 또는 업체명 검색..." onkeyup="filterPeople()">
-
+    <header><h1>👥 현장 인력 정밀 관리</h1></header>
+    <input type="text" id="searchInput" class="search-box" placeholder="이름/업체/특이사항 검색..." onkeyup="filterPeople()">
     <div id="peopleList"></div>
 </div>
 
 <script>
     /**
-     * [사용자 데이터 수정 구역]
-     * 여기에 인물 정보를 계속 추가하시면 됩니다.
+     * [데이터 수정 가이드]
+     * 1. photo: 이미지 파일명 (GitHub 폴더에 같이 넣은 사진 파일 이름)
+     * 2. traits: 성격/특징
+     * 3. history: 있었던 일/특이사항
+     * 4. specs: 신체 사이즈/신체 특징
      */
     const peopleData = [
-        { name: "제영모", team: "구미방면/득우건설", position: "사원", phone: "010-8343-5317" },
-        { name: "남영선", team: "구미방면/서울연락소", position: "반장", phone: "010-5880-6009" },
-        { name: "장희정", team: "구미방면/경산회실", position: "팀장", phone: "010-8310-6080" },
-        { name: "홍영숙", team: "구미방면/경산회실", position: "사원", phone: "010-7412-0575" },
-        { name: "손경옥", team: "구미방면/경산회실", position: "수습", phone: "010-3903-0154" },
-        // { name: "이름", team: "업체명", position: "직함", phone: "번호" } <- 이런 식으로 추가
+        { 
+            name: "제영모", team: "구미방면/득우건설", position: "사원", phone: "010-8343-5317",
+            photo: "jym.jpg", 
+            traits: "성실함, 말수가 적으나 업무 처리가 빠름", 
+            history: "26년 3월 성주 현장 투입, 안전 고리 체결 우수자 표창", 
+            specs: "175cm / 75kg / 상의 105"
+        },
+        { 
+            name: "남영선", team: "구미방면/서울연락소", position: "반장", phone: "010-5880-6009",
+            photo: "nys.jpg", 
+            traits: "꼼꼼함, 현장 정리에 민감함", 
+            history: "비계 설치 전문가, 과거 통로 미확보로 1회 구두 경고 있음", 
+            specs: "180cm / 82kg / 발사이즈 280"
+        }
     ];
 
-    const listContainer = document.getElementById('peopleList');
-
-    // 화면에 리스트 그리기 함수
     function displayPeople(data) {
+        const listContainer = document.getElementById('peopleList');
         listContainer.innerHTML = '';
-        data.forEach(person => {
+        data.forEach((person, index) => {
             const card = `
-                <div class="person-card">
-                    <div class="info">
-                        <h3>${person.name} <small style="color:#999; font-weight:normal;">${person.position}</small></h3>
-                        <p>${person.team}</p>
-                        <p style="color:#007bff;">${person.phone}</p>
+                <div class="person-card" id="card-${index}">
+                    <div class="basic-info" onclick="toggleDetails(${index})">
+                        <div class="name-tag">
+                            <h3>${person.name} <small style="color:#888;">${person.position}</small></h3>
+                            <p>${person.team}</p>
+                        </div>
+                        <a href="tel:${person.phone}" class="call-btn" onclick="event.stopPropagation();">📞 전화</a>
                     </div>
-                    <a href="tel:${person.phone}" class="call-btn">📞 전화</a>
+                    <div class="details">
+                        <img src="${person.photo}" alt="사진 미등록" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                        <div class="detail-item"><span class="label">성격/성향:</span> ${person.traits}</div>
+                        <div class="detail-item"><span class="label">신체 사이즈:</span> ${person.specs}</div>
+                        <div class="detail-item"><span class="label">특이사항:</span> ${person.history}</div>
+                    </div>
                 </div>
             `;
             listContainer.innerHTML += card;
         });
     }
 
-    // 검색 필터 로직
+    function toggleDetails(index) {
+        const card = document.getElementById(`card-${index}`);
+        card.classList.toggle('active');
+    }
+
     function filterPeople() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const filtered = peopleData.filter(p => 
-            p.name.toLowerCase().includes(query) || 
-            p.team.toLowerCase().includes(query)
+            p.name.includes(query) || p.team.includes(query) || p.traits.includes(query) || p.history.includes(query)
         );
         displayPeople(filtered);
     }
 
-    // 초기 실행
     displayPeople(peopleData);
 </script>
-
 </body>
 </html>
