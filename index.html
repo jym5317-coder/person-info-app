@@ -1,111 +1,345 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>현장 인물 정보 관리 시스템 V2</title>
-    <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; padding: 10px; margin: 0; }
-        .container { max-width: 500px; margin: 0 auto; }
-        header { background: #1a73e8; color: white; padding: 15px; text-align: center; border-radius: 12px; margin-bottom: 15px; }
-        
-        .search-box { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; font-size: 16px; box-sizing: border-box; }
-
-        /* 인물 카드 스타일 */
-        .person-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 6px solid #1a73e8; }
-        .basic-info { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .name-tag h3 { margin: 0; font-size: 18px; }
-        .name-tag p { margin: 3px 0 0; color: #666; font-size: 13px; }
-        
-        /* 상세 정보 스타일 (평소엔 숨김) */
-        .details { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; font-size: 14px; line-height: 1.6; color: #444; }
-        .details img { width: 100%; border-radius: 8px; margin-bottom: 10px; background: #eee; }
-        .detail-item { margin-bottom: 8px; }
-        .label { font-weight: bold; color: #1a73e8; margin-right: 5px; }
-
-        .call-btn { background: #34a853; color: white; text-decoration: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; }
-        .active .details { display: block; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>인원관리 앱</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
-<body>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+  <div id="root"></div>
 
-<div class="container">
-    <header><h1>👥 현장 인력 정밀 관리</h1></header>
-    <input type="text" id="searchInput" class="search-box" placeholder="이름/업체/특이사항 검색..." onkeyup="filterPeople()">
-    <div id="peopleList"></div>
-</div>
+  <script>
+    // ===== 설정 =====
+    const PASSWORD = '1234'; // 비밀번호
 
-<script>
-    /**
-     * [데이터 수정 가이드]
-     * 1. photo: 이미지 파일명 (GitHub 폴더에 같이 넣은 사진 파일 이름)
-     * 2. traits: 성격/특징
-     * 3. history: 있었던 일/특이사항
-     * 4. specs: 신체 사이즈/신체 특징
-     */
-    const peopleData = [
-        { 
-            name: "제영모", team: "득우건설/안전, 품질,공무", position: "사원", phone: "010-8343-5317",
-            photo: "1.jpg", 
-            traits: "성실함, 말수가 적으나 업무 처리가 빠름", 
-            history: "초전목공소 품질관리자, 양정창원회관 안전관리자", 
-            specs: "발사이즈 270 / 상의 100"
-        },
-        { 
-            name: "김광석", team: "골조", position: "팀장", phone: "010-4737-0684",
-            photo: "2.jpg", 
-            traits: "꼼꼼함, 현장 정리에 민감함", 
-            history: "관리감독자, 인원통솔에 탁월", 
-            specs: " / 발사이즈 / 상의"
-        },
-        { 
-            name: "ㅇㅇㅇ", team: "ㅇㅇ", position: "ㅇㅇ", phone: "ㅇㅇㅇ-ㅇㅇㅇㅇ-ㅇㅇㅇㅇ",
-            photo: "이름.jpg", 
-            traits: "내용", 
-            history: "과거 행적", 
-            specs: " / 발사이즈 / 상의"
-        }
-    ];
+    // ===== 전역 변수 =====
+    let csvData = [];
+    let currentPersonIndex = 0;
+    let currentFolderIndex = 0;
+    let currentPhotos = [];
+    let photoIndex = 0;
+    let photosByFolder = {}; // 폴더별 사진 그룹
 
-    function displayPeople(data) {
-        const listContainer = document.getElementById('peopleList');
-        listContainer.innerHTML = '';
-        data.forEach((person, index) => {
-            const card = `
-                <div class="person-card" id="card-${index}">
-                    <div class="basic-info" onclick="toggleDetails(${index})">
-                        <div class="name-tag">
-                            <h3>${person.name} <small style="color:#888;">${person.position}</small></h3>
-                            <p>${person.team}</p>
-                        </div>
-                        <a href="tel:${person.phone}" class="call-btn" onclick="event.stopPropagation();">📞 전화</a>
-                    </div>
-                    <div class="details">
-                        <img src="${person.photo}" alt="사진 미등록" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
-                        <div class="detail-item"><span class="label">성격/성향:</span> ${person.traits}</div>
-                        <div class="detail-item"><span class="label">신체 사이즈:</span> ${person.specs}</div>
-                        <div class="detail-item"><span class="label">특이사항:</span> ${person.history}</div>
-                    </div>
-                </div>
-            `;
-            listContainer.innerHTML += card;
+    // ===== 비밀번호 화면 =====
+    function showLoginScreen() {
+      document.getElementById('root').innerHTML = `
+        <div class="flex items-center justify-center min-h-screen p-4">
+          <div class="bg-white rounded-2xl shadow-2xl p-12 max-w-sm w-full">
+            <div class="text-center mb-8">
+              <div class="text-6xl mb-4">🔒</div>
+              <h1 class="text-2xl font-bold text-gray-800">보안 수첩 접속</h1>
+            </div>
+            
+            <div class="space-y-4">
+              <input 
+                type="password" 
+                id="passwordInput" 
+                placeholder="비밀번호"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-center text-lg"
+                onkeypress="if(event.key==='Enter') unlock()"
+              />
+              
+              <button 
+                onclick="unlock()"
+                class="w-full px-4 py-3 bg-red-500 text-white font-bold text-lg rounded-lg hover:bg-red-600 transition"
+              >
+                열기
+              </button>
+              
+              <div id="errorMsg" class="text-red-600 text-center text-sm font-semibold" style="display: none;">
+                비밀번호가 틀렸습니다
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+    }
+
+    function unlock() {
+      const input = document.getElementById('passwordInput').value;
+      if (input === PASSWORD) {
+        init();
+      } else {
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').focus();
+      }
+    }
+
+    // ===== 앱 초기화 =====
+    async function init() {
+      try {
+        const res = await fetch('인명.csv');
+        const text = await res.text();
+        
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            console.log('CSV 파싱 완료:', results.data);
+            csvData = results.data.filter(row => row.아이디 && row.아이디.trim());
+            
+            if (csvData.length > 0) {
+              loadPersonData(0);
+              render();
+            } else {
+              showError('데이터가 없습니다');
+            }
+          },
+          error: (error) => {
+            console.error('CSV 파싱 에러:', error);
+            showError(`CSV 파일을 읽을 수 없습니다`);
+          }
         });
+      } catch (e) {
+        console.error('파일 로드 에러:', e);
+        showError('인명.csv 파일을 찾을 수 없습니다');
+      }
     }
 
-    function toggleDetails(index) {
-        const card = document.getElementById(`card-${index}`);
-        card.classList.toggle('active');
+    function showError(msg) {
+      document.getElementById('root').innerHTML = `
+        <div class="flex items-center justify-center min-h-screen">
+          <div class="text-center">
+            <div class="text-6xl mb-4">❌</div>
+            <p class="text-red-600 text-xl font-semibold">${msg}</p>
+          </div>
+        </div>
+      `;
     }
 
-    function filterPeople() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = peopleData.filter(p => 
-            p.name.includes(query) || p.team.includes(query) || p.traits.includes(query) || p.history.includes(query)
-        );
-        displayPeople(filtered);
+    function loadPersonData(idx) {
+      currentPersonIndex = idx;
+      const person = csvData[idx];
+      const photoPath = person?.사진파일 || '';
+      
+      // 폴더별로 사진 그룹화
+      photosByFolder = {};
+      
+      if (photoPath && photoPath.trim()) {
+        const paths = photoPath
+          .split(',')
+          .map(p => p.trim())
+          .filter(Boolean);
+        
+        paths.forEach(path => {
+          // "폴더/파일.jpg" 형식에서 폴더 추출
+          const parts = path.split('/');
+          const folder = parts[0] || 'body';
+          const filePath = `img/${person.이름}/${path}`;
+          
+          if (!photosByFolder[folder]) {
+            photosByFolder[folder] = [];
+          }
+          photosByFolder[folder].push(filePath);
+        });
+      }
+      
+      currentFolderIndex = 0;
+      photoIndex = 0;
+      updateCurrentPhotos();
     }
 
-    displayPeople(peopleData);
-</script>
+    function updateCurrentPhotos() {
+      const folders = Object.keys(photosByFolder);
+      if (folders.length > 0) {
+        const currentFolder = folders[currentFolderIndex];
+        currentPhotos = photosByFolder[currentFolder] || [];
+      } else {
+        currentPhotos = [];
+      }
+      photoIndex = 0;
+    }
+
+    function render() {
+      const person = csvData[currentPersonIndex];
+      const folders = Object.keys(photosByFolder);
+      
+      let html = `
+        <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+          <div class="max-w-6xl mx-auto">
+            
+            <!-- 상단 인명 탭 바 -->
+            <div class="mb-6">
+              <div class="flex gap-2 flex-wrap bg-white p-4 rounded-2xl shadow-lg overflow-x-auto">
+      `;
+      
+      csvData.forEach((p, idx) => {
+        const isActive = currentPersonIndex === idx;
+        html += `
+          <button 
+            onclick="selectPerson(${idx})"
+            class="px-6 py-3 rounded-full font-bold transition flex-shrink-0 whitespace-nowrap ${
+              isActive
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }"
+          >
+            ${p.이름}
+          </button>
+        `;
+      });
+      
+      html += `
+              </div>
+            </div>
+
+            <!-- 메인 카드 -->
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+              
+              <!-- 제목 섹션 -->
+              <div class="mb-6 pb-6 border-b-2 border-gray-200">
+                <h2 class="text-4xl font-black text-gray-800">
+                  ${person.이름}
+                </h2>
+                <p class="text-gray-500 text-sm mt-2">
+                  ${person.왕목1 || ''} | ${person.왕목2 || ''}
+                </p>
+              </div>
+
+              <!-- 상황별(폴더별) 탭 -->
+              ${folders.length > 0 ? `
+                <div class="mb-6 flex gap-2 flex-wrap bg-gray-100 p-3 rounded-lg">
+                  ${folders.map((folder, idx) => `
+                    <button 
+                      onclick="selectFolder(${idx})"
+                      class="px-4 py-2 rounded-lg font-semibold transition ${
+                        currentFolderIndex === idx
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-200'
+                      }"
+                    >
+                      ${folder}
+                    </button>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              <!-- 사진 슬라이더 -->
+              <div class="mb-10">
+                <div class="bg-gray-100 p-6 rounded-xl">
+                  <!-- 사진 카드들 -->
+                  <div class="flex gap-4 overflow-x-auto pb-4 scroll-smooth">
+      `;
+      
+      for (let i = 0; i < 5; i++) {
+        const photoUrl = currentPhotos[photoIndex + i];
+        html += `
+          <div class="w-56 h-56 bg-gray-300 rounded-xl flex-shrink-0 overflow-hidden border-4 border-gray-400 relative">
+            ${photoUrl ? `
+              <img 
+                src="${photoUrl}" 
+                alt="사진 ${photoIndex + i + 1}" 
+                class="w-full h-full object-cover"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+              />
+            ` : ''}
+            <div class="w-full h-full flex items-center justify-center text-gray-600 bg-gray-300 text-sm font-semibold" style="display: ${photoUrl ? 'none' : 'flex'}">
+              body
+            </div>
+            ${photoUrl ? `
+              <div class="absolute top-2 left-2 bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded">
+                body
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+      
+      html += `
+                  </div>
+
+                  <!-- 슬라이더 컨트롤 -->
+                  <div class="flex justify-between items-center mt-6">
+                    <button
+                      onclick="prevPhoto()"
+                      ${photoIndex === 0 ? 'disabled' : ''}
+                      class="text-2xl text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      ◀
+                    </button>
+                    
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="${Math.max(0, currentPhotos.length - 5)}"
+                      value="${photoIndex}"
+                      onchange="photoIndex = parseInt(this.value); render();"
+                      class="flex-1 mx-4 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    />
+                    
+                    <button
+                      onclick="nextPhoto()"
+                      ${photoIndex >= currentPhotos.length - 5 || currentPhotos.length === 0 ? 'disabled' : ''}
+                      class="text-2xl text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 데이터 섹션 (모든 항목 표시) -->
+              <div class="grid grid-cols-2 gap-6 mb-8">
+      `;
+      
+      // 모든 왕목 컬럼 표시 (왕목1부터 왕목17까지)
+      for (let i = 1; i <= 17; i++) {
+        const key = `왕목${i}`;
+        const value = person[key];
+        
+        if (value && String(value).trim()) {
+          html += `
+            <div class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <span class="font-semibold text-gray-700">${key}</span>
+              <span class="font-bold text-gray-900">${value}</span>
+            </div>
+          `;
+        }
+      }
+      
+      html += `
+              </div>
+
+              <!-- 하단 정보 -->
+              <div class="mt-8 pt-6 border-t border-gray-200 text-right text-xs text-gray-500">
+                아이디: ${person.아이디} | 사진: ${Object.keys(photosByFolder).length}개 폴더
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('root').innerHTML = html;
+    }
+
+    function selectPerson(idx) {
+      loadPersonData(idx);
+      render();
+    }
+
+    function selectFolder(idx) {
+      currentFolderIndex = idx;
+      updateCurrentPhotos();
+      render();
+    }
+
+    function prevPhoto() {
+      photoIndex = Math.max(0, photoIndex - 1);
+      render();
+    }
+
+    function nextPhoto() {
+      photoIndex = Math.min(Math.max(0, currentPhotos.length - 5), photoIndex + 1);
+      render();
+    }
+
+    // ===== 앱 시작 =====
+    window.addEventListener('load', showLoginScreen);
+  </script>
 </body>
 </html>
